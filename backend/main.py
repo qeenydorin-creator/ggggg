@@ -15,19 +15,23 @@ import uuid
 # ==============================
 # 基础配置
 # ==============================
-DATABASE_URL = os.environ.get("DATABASE_URL")  # Zeabur 自动注入
-SECRET_KEY = os.environ.get("SECRET_KEY", "CHANGE_ME")
+# 从环境变量中获取数据库连接字符串
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://root:rYVmAg7E5l3nX4I61619pfbzz@cgk1.clusters.zeabur.com:28888/zeabur")
+SECRET_KEY = os.getenv("SECRET_KEY", "CHANGE_ME")
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_HOURS = 24
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
+# 创建数据库引擎和会话
 engine = create_engine(DATABASE_URL)
 SessionLocal = sessionmaker(bind=engine)
 Base = declarative_base()
 
+# 初始化 FastAPI 应用
 app = FastAPI(title="Production API")
 
+# 配置 CORS 中间件
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"],
@@ -66,6 +70,7 @@ class OrderItem(Base):
 
     order = relationship("Order", back_populates="items")
 
+# 创建表
 Base.metadata.create_all(engine)
 
 # ==============================
@@ -82,6 +87,7 @@ def create_token(phone: str, role: str):
 # ==============================
 # 依赖
 # ==============================
+# 获取数据库会话
 def get_db():
     db = SessionLocal()
     try:
@@ -89,6 +95,7 @@ def get_db():
     finally:
         db.close()
 
+# 获取当前用户
 def get_current_user(token: str = Header(None), db: Session = Depends(get_db)):
     if not token:
         raise HTTPException(401, "未登录")
@@ -164,7 +171,7 @@ def list_all_orders(user: User = Depends(get_current_user), db: Session = Depend
         }
         for o in orders
     ]
-    
+
 # ==============================
 # 登录接口
 # ==============================
