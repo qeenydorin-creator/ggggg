@@ -43,6 +43,8 @@ app.add_middleware(
 # ==============================
 # 数据库模型
 # ==============================
+# ==============================
+
 class User(Base):
     __tablename__ = "users"
     phone = Column(String, primary_key=True)
@@ -178,12 +180,27 @@ def list_all_orders(user: User = Depends(get_current_user), db: Session = Depend
 class LoginForm(BaseModel):
     phone: str
     password: str
+    total_amount: float
 
 @app.post("/api/login")
 def login(data: LoginForm, db: Session = Depends(get_db)):
     user = db.query(User).filter(User.phone == data.phone).first()
     if not user or not pwd_context.verify(data.password, user.password_hash):
         raise HTTPException(400, "账号或密码错误")
+
+    # ==============================
+# 订单 Pydantic 模型（前端下单用）
+# ==============================
+class OrderItemIn(BaseModel):
+    id: str
+    name: str
+    price: float
+    qty: int
+    image: str
+
+class OrderCreate(BaseModel):
+    items: List[OrderItemIn]
+    total_amount: float
 
     token = create_token(user.phone, user.role)
     return {
@@ -251,3 +268,4 @@ def list_orders(user: User = Depends(get_current_user), db: Session = Depends(ge
         }
         for o in orders
     ]
+
