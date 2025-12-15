@@ -11,11 +11,11 @@ from sqlalchemy import (
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship, Session
 import os
 import uuid
+import uvicorn  # 用于启动后端应用时指定端口
 
 # ==============================
 # 基础配置（Zeabur）
 # ==============================
-
 DATABASE_URL = os.environ.get("DATABASE_URL")
 if not DATABASE_URL:
     raise RuntimeError("DATABASE_URL 未设置（请在 Zeabur 环境变量中配置）")
@@ -23,13 +23,13 @@ if not DATABASE_URL:
 SECRET_KEY = os.environ.get("SECRET_KEY", "CHANGE_ME_IN_PRODUCTION")
 ALGORITHM = "HS256"
 TOKEN_EXPIRE_HOURS = 24
+WEB_PORT = os.getenv("WEB_PORT", "8080")  # 获取环境变量设置端口，默认 8080
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 # ==============================
 # 数据库初始化
 # ==============================
-
 engine = create_engine(
     DATABASE_URL,
     pool_pre_ping=True,
@@ -41,7 +41,6 @@ Base = declarative_base()
 # ==============================
 # FastAPI 初始化
 # ==============================
-
 app = FastAPI(title="Production API")
 
 app.add_middleware(
@@ -55,7 +54,6 @@ app.add_middleware(
 # ==============================
 # 数据库模型
 # ==============================
-
 class User(Base):
     __tablename__ = "users"
 
@@ -94,7 +92,6 @@ Base.metadata.create_all(bind=engine)
 # ==============================
 # JWT 工具
 # ==============================
-
 def create_token(phone: str, role: str) -> str:
     payload = {
         "sub": phone,
@@ -106,7 +103,6 @@ def create_token(phone: str, role: str) -> str:
 # ==============================
 # 依赖
 # ==============================
-
 def get_db():
     db = SessionLocal()
     try:
@@ -137,7 +133,6 @@ def get_current_user(
 # ==============================
 # Pydantic 模型
 # ==============================
-
 class RegisterForm(BaseModel):
     phone: str
     password: str
@@ -164,7 +159,6 @@ class OrderCreate(BaseModel):
 # ==============================
 # 认证接口
 # ==============================
-
 @app.post("/api/register")
 def register(data: RegisterForm, db: Session = Depends(get_db)):
     if db.query(User).filter(User.phone == data.phone).first():
@@ -204,7 +198,6 @@ def profile(user: User = Depends(get_current_user)):
 # ==============================
 # 订单接口
 # ==============================
-
 @app.post("/api/orders")
 def create_order(
     data: OrderCreate,
